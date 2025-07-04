@@ -10,9 +10,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="https://asset.brandfetch.io/idwDWo4ONQ/idFvFIyB0Q.png">
-<!-- Favicon SVG Temático -->
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%234CACFF' stroke-width='8' stroke-linecap='round'%3E%3Cpath d='M50 35 V15' /%3E%3Cpath d='M50 35 V10' transform='rotate(45 50 50)' /%3E%3Cpath d='M50 35 V20' transform='rotate(90 50 50)' /%3E%3Cpath d='M50 35 V5' transform='rotate(135 50 50)' /%3E%3Cpath d='M50 35 V25' transform='rotate(180 50 50)' /%3E%3Cpath d='M50 35 V15' transform='rotate(225 50 50)' /%3E%3Cpath d='M50 35 V5' transform='rotate(270 50 50)' /%3E%3Cpath d='M50 35 V22' transform='rotate(315 50 50)' /%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='12' fill='%234CACFF'/%3E%3C/svg%3E">
+    
+    <!-- Placeholder para el Favicon Dinámico -->
+    <link id="dynamic-favicon" rel="icon" type="image/x-icon" href="#">
+
     <style>
         :root {
             --glow-color: rgba(76, 172, 255, 0.6);
@@ -62,10 +63,6 @@
             transition: transform 0.1s ease-out, box-shadow 0.4s ease;
             will-change: transform, box-shadow;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-        }
-
-        .player-card.playing {
-            /* El brillo se aplicará vía JS con la animación de bajo */
         }
 
         .artwork-wrapper {
@@ -120,7 +117,7 @@
         }
 
         .radio-info {
-            transform: translateZ(30px); /* Eleva la info en el espacio 3D */
+            transform: translateZ(30px);
         }
 
         .radio-info h2 {
@@ -130,7 +127,7 @@
         }
 
         .now-playing {
-            min-height: 48px; /* Evita saltos de layout */
+            min-height: 48px; 
             margin: 10px 0;
             color: rgba(255, 255, 255, 0.7);
         }
@@ -208,7 +205,6 @@
             border-radius: 50%;
             box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
         }
-
     </style>
 </head>
 <body>
@@ -250,24 +246,83 @@
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
     <script>
         $(document).ready(function() {
-            // --- VARIABLES GLOBALES Y CONSTANTES ---
+            // --- VARIABLES GLOBALES ---
             const audioPlayer = $('#player')[0];
             const playPauseBtn = $('#btn-play-pause');
             const playerCard = $('.player-card');
-            const volumeSlider = $('#volume-slider');
-            const songTitleEl = $('#song-title');
-            const songArtistEl = $('#song-artist');
             const stationId = "my313e532yzuv";
             
             let audioContext, analyser, source, dataArray;
             let isPlaying = false;
             let isAudioContextInitialized = false;
             let lastSong = '';
-            
-            // --- LÓGICA PRINCIPAL ---
 
+            // --- VARIABLES PARA FAVICON DINÁMICO ---
+            let faviconCanvas, faviconCtx;
+            let lastFaviconUpdateTime = 0;
+            const faviconUpdateInterval = 100; // 100ms = 10fps. No sobrecargar.
+            let staticFaviconDataUrl = '';
+
+            // --- LÓGICA DE FAVICON DINÁMICO ---
+            function initFavicon() {
+                faviconCanvas = document.createElement('canvas');
+                faviconCanvas.width = 64;
+                faviconCanvas.height = 64;
+                faviconCtx = faviconCanvas.getContext('2d');
+                drawStaticFavicon();
+                staticFaviconDataUrl = faviconCanvas.toDataURL('image/png');
+                $('#dynamic-favicon').attr('href', staticFaviconDataUrl);
+            }
+
+            function drawStaticFavicon() {
+                const ctx = faviconCtx;
+                ctx.clearRect(0, 0, 64, 64);
+                ctx.beginPath();
+                ctx.arc(32, 32, 10, 0, 2 * Math.PI);
+                ctx.fillStyle = '#4CACFF';
+                ctx.fill();
+                
+                ctx.strokeStyle = '#4CACFF';
+                ctx.lineWidth = 5;
+                for (let i = 0; i < 8; i++) {
+                    const angle = i * (2 * Math.PI / 8);
+                    ctx.beginPath();
+                    ctx.moveTo(32 + Math.cos(angle) * 14, 32 + Math.sin(angle) * 14);
+                    ctx.lineTo(32 + Math.cos(angle) * 20, 32 + Math.sin(angle) * 20);
+                    ctx.stroke();
+                }
+            }
+
+            function updateDynamicFavicon() {
+                const ctx = faviconCtx;
+                ctx.clearRect(0, 0, 64, 64);
+                
+                const avgLows = (dataArray[1] + dataArray[2] + dataArray[3]) / 3;
+                const centerRadius = 8 + (avgLows / 255) * 5;
+                ctx.beginPath();
+                ctx.arc(32, 32, centerRadius, 0, 2 * Math.PI);
+                ctx.fillStyle = '#4CACFF';
+                ctx.fill();
+
+                ctx.strokeStyle = '#4CACFF';
+                ctx.lineWidth = 5;
+                const bars = 8;
+                for (let i = 0; i < bars; i++) {
+                    const dataIndex = Math.floor(i * (analyser.frequencyBinCount / bars));
+                    const barHeight = (dataArray[dataIndex] / 255) * 15;
+                    const angle = i * (2 * Math.PI / bars);
+                    ctx.beginPath();
+                    ctx.moveTo(32 + Math.cos(angle) * (centerRadius + 4), 32 + Math.sin(angle) * (centerRadius + 4));
+                    ctx.lineTo(32 + Math.cos(angle) * (centerRadius + 8 + barHeight), 32 + Math.sin(angle) * (centerRadius + 8 + barHeight));
+                    ctx.stroke();
+                }
+
+                $('#dynamic-favicon').attr('href', faviconCanvas.toDataURL('image/png'));
+            }
+
+
+            // --- LÓGICA DE AUDIO PRINCIPAL ---
             function playAudio() {
-                // INICIALIZAR EL AUDIO CONTEXT AL PRIMER CLIC (CRÍTICO)
                 if (!isAudioContextInitialized) {
                     try {
                         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -279,21 +334,20 @@
                         const bufferLength = analyser.frequencyBinCount;
                         dataArray = new Uint8Array(bufferLength);
                         isAudioContextInitialized = true;
-                        drawVisualizer(); // Inicia el visualizador
+                        drawVisualizerLoop(); 
                     } catch (e) {
                         console.error("Web Audio API no es soportada", e);
-                        alert("Tu navegador no soporta los efectos de audio. La música debería sonar de todas formas.");
                     }
                 }
                 
                 audioPlayer.play().then(() => {
                     isPlaying = true;
                     updateUI();
-                    fetchMetadata(); // Busca la canción al empezar a sonar
+                    fetchMetadata(); 
                 }).catch(e => {
                     console.error("La reproducción falló:", e);
-                    songTitleEl.text("Error de reproducción");
-                    songArtistEl.text("Por favor, interactúa con la página y vuelve a intentarlo.");
+                    $('#song-title').text("Error de reproducción");
+                    $('#song-artist').text("Por favor, haz clic de nuevo.");
                 });
             }
 
@@ -301,65 +355,57 @@
                 audioPlayer.pause();
                 isPlaying = false;
                 updateUI();
+                $('#dynamic-favicon').attr('href', staticFaviconDataUrl);
             }
 
             function updateUI() {
-                if (isPlaying) {
-                    playerCard.addClass('playing');
-                    playPauseBtn.find('i').removeClass('fa-play').addClass('fa-pause');
-                } else {
-                    playerCard.removeClass('playing');
-                    playPauseBtn.find('i').removeClass('fa-pause').addClass('fa-play');
-                }
+                playerCard.toggleClass('playing', isPlaying);
+                playPauseBtn.find('i').toggleClass('fa-play fa-pause');
             }
 
-            // --- VISUALIZADOR DE AUDIO (CANVAS) ---
-            const canvas = document.getElementById('audio-visualizer');
-            const ctx = canvas.getContext('2d');
-            const radius = 95; 
+            // --- BUCLE DE VISUALIZACIÓN ---
+            const mainVisualizerCanvas = document.getElementById('audio-visualizer');
+            const mainVisualizerCtx = mainVisualizerCanvas.getContext('2d');
 
-            function drawVisualizer() {
-                requestAnimationFrame(drawVisualizer);
-                if (!isAudioContextInitialized || !isPlaying || !dataArray) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    playerCard.css('--glow-color', `rgba(76, 172, 255, 0.3)`);
-                    return;
-                }
-
-                analyser.getByteFrequencyData(dataArray);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const bufferLength = analyser.frequencyBinCount;
-                const barWidth = (2 * Math.PI) / (bufferLength * 0.9);
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
+            function drawVisualizerLoop() {
+                requestAnimationFrame(drawVisualizerLoop);
+                if (!isAudioContextInitialized || !dataArray) return;
                 
+                analyser.getByteFrequencyData(dataArray);
+
+                // --- DIBUJAR VISUALIZADOR PRINCIPAL ---
+                mainVisualizerCtx.clearRect(0, 0, mainVisualizerCanvas.width, mainVisualizerCanvas.height);
+                const radius = 95; 
+                const bufferLength = analyser.frequencyBinCount;
+                const centerX = mainVisualizerCanvas.width / 2;
+                const centerY = mainVisualizerCanvas.height / 2;
                 for (let i = 0; i < bufferLength; i++) {
                     const barHeight = dataArray[i] / 2.5;
-                    const angle = i * (2 * Math.PI) / bufferLength;
-                    
+                    const angle = i * (2 * Math.PI / bufferLength);
                     const x = centerX + Math.cos(angle) * radius;
                     const y = centerY + Math.sin(angle) * radius;
                     const x2 = centerX + Math.cos(angle) * (radius + barHeight);
                     const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-
-                    ctx.strokeStyle = `rgba(255, 255, 255, ${Math.max(0.2, barHeight / 100)})`;
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(x, y);
-                    ctx.lineTo(x2, y2);
-                    ctx.stroke();
+                    mainVisualizerCtx.strokeStyle = `rgba(255, 255, 255, ${Math.max(0.2, barHeight / 100)})`;
+                    mainVisualizerCtx.lineWidth = 3;
+                    mainVisualizerCtx.beginPath(); mainVisualizerCtx.moveTo(x, y); mainVisualizerCtx.lineTo(x2, y2); mainVisualizerCtx.stroke();
                 }
 
                 const bassValue = (dataArray[1] + dataArray[2] + dataArray[3]) / 3;
                 const bassGlowOpacity = Math.min(0.3 + (bassValue / 255) * 0.7, 1.0);
                 playerCard.css('--glow-color', `rgba(76, 172, 255, ${bassGlowOpacity})`);
+
+                // --- ACTUALIZAR FAVICON (THROTTLED) ---
+                const now = Date.now();
+                if (isPlaying && now - lastFaviconUpdateTime > faviconUpdateInterval) {
+                    lastFaviconUpdateTime = now;
+                    updateDynamicFavicon();
+                }
             }
-
-            // --- OBTENER METADATOS DE LA CANCIÓN ---
+            
+            // --- OBTENER METADATOS ---
             function fetchMetadata() {
-                // Evita hacer la llamada si no está sonando
                 if (!isPlaying) return;
-
                 fetch(`https://stream.zeno.fm/api/v2/nowplaying/?station_uuid=&stream=${stationId}`)
                 .then(response => response.json())
                 .then(data => {
@@ -367,57 +413,35 @@
                     if (currentSong && currentSong !== lastSong) {
                         lastSong = currentSong;
                         let [artist, title] = currentSong.split(' - ').map(s => s.trim());
-                        
-                        if (!title) {
-                            title = artist;
-                            artist = "Música continua";
-                        }
-                        
-                        songTitleEl.css('opacity', 0);
-                        songArtistEl.css('opacity', 0);
-                        
+                        if (!title) { title = artist; artist = "Música continua"; }
+                        $('#song-title').css('opacity', 0); $('#song-artist').css('opacity', 0);
                         setTimeout(() => {
-                           songTitleEl.text(title).css('opacity', 1);
-                           songArtistEl.text(artist).css('opacity', 1);
+                           $('#song-title').text(title).css('opacity', 1);
+                           $('#song-artist').text(artist).css('opacity', 1);
                         }, 300);
                     }
                 })
                 .catch(error => console.error("Error fetching metadata:", error));
             }
             
-            // --- INICIALIZACIÓN Y EVENT LISTENERS ---
+            // --- INICIALIZACIÓN ---
             
-            // Partículas
             particlesJS("particles-js", {"particles":{"number":{"value":50,"density":{"enable":true,"value_area":800}},"color":{"value":"#ffffff"},"shape":{"type":"circle"},"opacity":{"value":0.3,"random":true},"size":{"value":3,"random":true},"line_linked":{"enable":false},"move":{"enable":true,"speed":0.5,"direction":"none","random":true,"straight":false,"out_mode":"out","bounce":false}},"interactivity":{"detect_on":"canvas","events":{"onhover":{"enable":false},"onclick":{"enable":false}}},"retina_detect":true});
+            initFavicon();
 
-            // Controles
             playPauseBtn.on('click', () => isPlaying ? pauseAudio() : playAudio());
-
-            volumeSlider.on('input', function() {
-                audioPlayer.volume = $(this).val() / 100;
-            });
-
+            $('#volume-slider').on('input', function() { audioPlayer.volume = $(this).val() / 100; });
             $(audioPlayer).on('error', function(e) {
-                console.error("Error en el stream de audio:", e);
-                isPlaying = false;
-                updateUI();
-                songTitleEl.text("Error de Transmisión");
-                songArtistEl.text("Intenta recargar la página.");
-                playerCard.removeClass('playing');
+                console.error("Error en el stream:", e); isPlaying = false; updateUI();
+                $('#song-title').text("Error de Transmisión");
             });
-            
-            // Efecto 3D
             $('.main-container').on('mousemove', function(e) {
                 const card = $('.player-card');
-                let ax = -(($(window).innerWidth() / 2 - e.pageX) / 20);
-                let ay = (($(window).innerHeight() / 2 - e.pageY) / 20);
+                let ax = -(($(window).innerWidth() / 2 - e.pageX) / 20); let ay = (($(window).innerHeight() / 2 - e.pageY) / 20);
                 card.css('transform', `rotateY(${ax}deg) rotateX(${ay}deg)`);
-            }).on('mouseleave', () => {
-                 $('.player-card').css('transform', 'rotateY(0deg) rotateX(0deg)');
-            });
-
-            // Set up inicial
-            audioPlayer.volume = volumeSlider.val() / 100;
+            }).on('mouseleave', () => { $('.player-card').css('transform', 'rotateY(0deg) rotateX(0deg)'); });
+            
+            audioPlayer.volume = $('#volume-slider').val() / 100;
             setInterval(fetchMetadata, 7000);
         });
     </script>
