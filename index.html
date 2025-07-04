@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Dulce | Experiencia Inmersiva</title>
+    
+    <!-- Dependencias -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="https://asset.brandfetch.io/idwDWo4ONQ/idFvFIyB0Q.png">
+
+    <style>
+        :root {
+            --glow-color: rgba(76, 172, 255, 0.6);
+        }
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            background-color: #0d1117;
+            color: #fff;
+        }
+
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        .main-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+            perspective: 1000px; /* Habilita el espacio 3D */
+        }
+
+        .player-card {
+            width: 90%;
+            max-width: 380px;
+            padding: 35px;
+            background: rgba(23, 29, 41, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            transform-style: preserve-3d; /* Permite transformaciones 3D en hijos */
+            transition: transform 0.1s ease-out, box-shadow 0.4s ease;
+            will-change: transform, box-shadow;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+
+        .player-card.playing {
+            /* El brillo se aplicará vía JS con la animación de bajo */
+        }
+
+        .artwork-wrapper {
+            position: relative;
+            margin: 0 auto 25px;
+            width: 210px;
+            height: 210px;
+            transform: translateZ(50px); /* Eleva el arte en el espacio 3D */
+        }
+        
+        #audio-visualizer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .album-art {
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: rotateArt 20s linear infinite;
+            animation-play-state: paused;
+        }
+        
+        .player-card.playing .album-art {
+            animation-play-state: running;
+        }
+        
+        .album-art i {
+            font-size: 70px;
+            color: rgba(255, 255, 255, 0.6);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes rotateArt {
+            from { transform: translate(-50%,-50%) rotate(0deg); }
+            to { transform: translate(-50%,-50%) rotate(360deg); }
+        }
+
+        .radio-info {
+            transform: translateZ(30px); /* Eleva la info en el espacio 3D */
+        }
+
+        .radio-info h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .now-playing {
+            min-height: 48px; /* Evita saltos de layout */
+            margin: 10px 0;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        #song-title, #song-artist {
+            display: block;
+            transition: opacity 0.5s ease;
+        }
+
+        #song-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        #song-artist {
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            margin: 25px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            transform: translateZ(20px);
+        }
+
+        .btn-control {
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-control:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.1);
+        }
+
+        #btn-play-pause {
+            width: 70px;
+            height: 70px;
+            font-size: 2rem;
+            background-color: var(--glow-color);
+            border: none;
+        }
+
+        .volume-control {
+            transform: translateZ(20px);
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 80%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="particles-js"></div>
+    
+    <audio id="player" src="https://stream.zeno.fm/my313e532yzuv" crossorigin="anonymous" preload="auto"></audio>
+    
+    <div class="main-container">
+        <div class="player-card">
+            <div class="artwork-wrapper">
+                <canvas id="audio-visualizer"></canvas>
+                <div class="album-art">
+                    <i class="fa-solid fa-headphones-simple"></i>
+                </div>
+            </div>
+
+            <div class="radio-info">
+                <h2>Radio Dulce</h2>
+                <div class="now-playing">
+                    <span id="song-title">Haz clic para escuchar</span>
+                    <span id="song-artist">Radio online</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn-control" id="btn-play-pause">
+                    <i class="fas fa-play"></i>
+                </button>
+            </div>
+            
+            <div class="volume-control">
+                <input type="range" id="volume-slider" min="0" max="100" value="75">
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // --- VARIABLES GLOBALES Y CONSTANTES ---
+            const audioPlayer = $('#player')[0];
+            const playPauseBtn = $('#btn-play-pause');
+            const playerCard = $('.player-card');
+            const volumeSlider = $('#volume-slider');
+            const songTitleEl = $('#song-title');
+            const songArtistEl = $('#song-artist');
+            const stationId = "my313e532yzuv";
+            
+            let audioContext, analyser, source, dataArray;
+            let isPlaying = false;
+            let isAudioContextInitialized = false;
+            let lastSong = '';
+            
+            // --- LÓGICA PRINCIPAL ---
+
+            function playAudio() {
+                // INICIALIZAR EL AUDIO CONTEXT AL PRIMER CLIC (CRÍTICO)
+                if (!isAudioContextInitialized) {
+                    try {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        analyser = audioContext.createAnalyser();
+                        source = audioContext.createMediaElementSource(audioPlayer);
+                        source.connect(analyser);
+                        analyser.connect(audioContext.destination);
+                        analyser.fftSize = 256;
+                        const bufferLength = analyser.frequencyBinCount;
+                        dataArray = new Uint8Array(bufferLength);
+                        isAudioContextInitialized = true;
+                        drawVisualizer(); // Inicia el visualizador
+                    } catch (e) {
+                        console.error("Web Audio API no es soportada", e);
+                        alert("Tu navegador no soporta los efectos de audio. La música debería sonar de todas formas.");
+                    }
+                }
+                
+                audioPlayer.play().then(() => {
+                    isPlaying = true;
+                    updateUI();
+                    fetchMetadata(); // Busca la canción al empezar a sonar
+                }).catch(e => {
+                    console.error("La reproducción falló:", e);
+                    songTitleEl.text("Error de reproducción");
+                    songArtistEl.text("Por favor, interactúa con la página y vuelve a intentarlo.");
+                });
+            }
+
+            function pauseAudio() {
+                audioPlayer.pause();
+                isPlaying = false;
+                updateUI();
+            }
+
+            function updateUI() {
+                if (isPlaying) {
+                    playerCard.addClass('playing');
+                    playPauseBtn.find('i').removeClass('fa-play').addClass('fa-pause');
+                } else {
+                    playerCard.removeClass('playing');
+                    playPauseBtn.find('i').removeClass('fa-pause').addClass('fa-play');
+                }
+            }
+
+            // --- VISUALIZADOR DE AUDIO (CANVAS) ---
+            const canvas = document.getElementById('audio-visualizer');
+            const ctx = canvas.getContext('2d');
+            const radius = 95; 
+
+            function drawVisualizer() {
+                requestAnimationFrame(drawVisualizer);
+                if (!isAudioContextInitialized || !isPlaying || !dataArray) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    playerCard.css('--glow-color', `rgba(76, 172, 255, 0.3)`);
+                    return;
+                }
+
+                analyser.getByteFrequencyData(dataArray);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const bufferLength = analyser.frequencyBinCount;
+                const barWidth = (2 * Math.PI) / (bufferLength * 0.9);
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const barHeight = dataArray[i] / 2.5;
+                    const angle = i * (2 * Math.PI) / bufferLength;
+                    
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+                    const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${Math.max(0.2, barHeight / 100)})`;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+
+                const bassValue = (dataArray[1] + dataArray[2] + dataArray[3]) / 3;
+                const bassGlowOpacity = Math.min(0.3 + (bassValue / 255) * 0.7, 1.0);
+                playerCard.css('--glow-color', `rgba(76, 172, 255, ${bassGlowOpacity})`);
+            }
+
+            // --- OBTENER METADATOS DE LA CANCIÓN ---
+            function fetchMetadata() {
+                // Evita hacer la llamada si no está sonando
+                if (!isPlaying) return;
+
+                fetch(`https://stream.zeno.fm/api/v2/nowplaying/?station_uuid=&stream=${stationId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const currentSong = data?.now_playing?.song?.trim() || 'Radio Dulce';
+                    if (currentSong && currentSong !== lastSong) {
+                        lastSong = currentSong;
+                        let [artist, title] = currentSong.split(' - ').map(s => s.trim());
+                        
+                        if (!title) {
+                            title = artist;
+                            artist = "Música continua";
+                        }
+                        
+                        songTitleEl.css('opacity', 0);
+                        songArtistEl.css('opacity', 0);
+                        
+                        setTimeout(() => {
+                           songTitleEl.text(title).css('opacity', 1);
+                           songArtistEl.text(artist).css('opacity', 1);
+                        }, 300);
+                    }
+                })
+                .catch(error => console.error("Error fetching metadata:", error));
+            }
+            
+            // --- INICIALIZACIÓN Y EVENT LISTENERS ---
+            
+            // Partículas
+            particlesJS("particles-js", {"particles":{"number":{"value":50,"density":{"enable":true,"value_area":800}},"color":{"value":"#ffffff"},"shape":{"type":"circle"},"opacity":{"value":0.3,"random":true},"size":{"value":3,"random":true},"line_linked":{"enable":false},"move":{"enable":true,"speed":0.5,"direction":"none","random":true,"straight":false,"out_mode":"out","bounce":false}},"interactivity":{"detect_on":"canvas","events":{"onhover":{"enable":false},"onclick":{"enable":false}}},"retina_detect":true});
+
+            // Controles
+            playPauseBtn.on('click', () => isPlaying ? pauseAudio() : playAudio());
+
+            volumeSlider.on('input', function() {
+                audioPlayer.volume = $(this).val() / 100;
+            });
+
+            $(audioPlayer).on('error', function(e) {
+                console.error("Error en el stream de audio:", e);
+                isPlaying = false;
+                updateUI();
+                songTitleEl.text("Error de Transmisión");
+                songArtistEl.text("Intenta recargar la página.");
+                playerCard.removeClass('playing');
+            });
+            
+            // Efecto 3D
+            $('.main-container').on('mousemove', function(e) {
+                const card = $('.player-card');
+                let ax = -(($(window).innerWidth() / 2 - e.pageX) / 20);
+                let ay = (($(window).innerHeight() / 2 - e.pageY) / 20);
+                card.css('transform', `rotateY(${ax}deg) rotateX(${ay}deg)`);
+            }).on('mouseleave', () => {
+                 $('.player-card').css('transform', 'rotateY(0deg) rotateX(0deg)');
+            });
+
+            // Set up inicial
+            audioPlayer.volume = volumeSlider.val() / 100;
+            setInterval(fetchMetadata, 7000);
+        });
+    </script>
+</body>
+</html>
